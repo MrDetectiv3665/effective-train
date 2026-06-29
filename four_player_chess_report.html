@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Four-Player Modern Chess Game</title>
+  <style>
+    :root { color-scheme: dark; --bg:#0f172a; --panel:#111827; --line:#334155; --text:#f8fafc; --muted:#cbd5e1; --accent:#38bdf8; }
+    body { margin:0; font-family: Arial, sans-serif; background:var(--bg); color:var(--text); }
+    main { max-width: 1180px; margin: 0 auto; padding: 28px 18px; }
+    section { background:var(--panel); border:1px solid var(--line); border-radius:18px; padding:20px; margin:18px 0; box-shadow:0 20px 60px #0006; }
+    button { padding: 12px 16px; margin: 6px; border:0; border-radius: 10px; background:var(--accent); color:#082f49; font-weight:700; cursor:pointer; }
+    button.secondary { background:#475569; color:var(--text); }
+    textarea, pre { width:100%; box-sizing:border-box; background:#020617; color:var(--text); border:1px solid var(--line); border-radius:12px; padding:14px; }
+    textarea { min-height:170px; }
+    pre { white-space:pre-wrap; overflow:auto; max-height:360px; }
+    table { width:100%; border-collapse:collapse; }
+    th, td { border-bottom:1px solid var(--line); padding:10px; text-align:left; font-variant-numeric:tabular-nums; }
+    th { color:var(--accent); }
+    .meta { color:var(--muted); }
+    .grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+<main>
+  <section>
+    <h1>Four-Player Modern Chess Game Viewer</h1>
+    <p class="meta">Clock: <strong>1 minute + 7 second increment</strong>. Turn order: Red, Blue, Yellow, Green.</p>
+    <button id="loadSample">Load sample self-play PGN</button>
+    <button id="render" class="secondary">Render pasted PGN</button>
+  </section>
+  <section class="grid">
+    <article>
+      <h2>Paste or edit PGN</h2>
+      <textarea id="pgnInput" spellcheck="false" aria-label="Four-player PGN input"></textarea>
+    </article>
+    <article>
+      <h2>PGN of this game</h2>
+      <pre id="pgnOutput"></pre>
+    </article>
+  </section>
+  <section>
+    <h2>Moves played</h2>
+    <table>
+      <thead><tr><th>#</th><th>Red</th><th>Blue</th><th>Yellow</th><th>Green</th></tr></thead>
+      <tbody id="movesBody"></tbody>
+    </table>
+  </section>
+</main>
+<script>
+const samplePgn = `1. h2-h3 .. b8-c8 .. h13-h12 .. m8-l8
+2. Bi1xBa9 .. Ka8xBa9 .. Qg14xQn7+ .. Kn8xQn7
+3. Qg1xm7+ .. Qa7xg13++ .. Ne14xQg13+ .. Kn7xQm7
+4. h3-h4 .. c8-d8 .. Bi14xb7 .. Bn9xg2+
+5. Ne1xBg2 .. Na5xBb7 .. Ng13-h11 .. l8-k8`;
+
+function escapeHtml(value) {
+  return value.replace(/[&<>'"]/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));
+}
+
+function renderPgn() {
+  const pgn = document.getElementById('pgnInput').value.trim();
+  document.getElementById('pgnOutput').textContent = pgn || 'Paste PGN on the left, then click Render pasted PGN.';
+  const body = document.getElementById('movesBody');
+  body.innerHTML = '';
+  if (!pgn) return;
+  for (const line of pgn.split(/\n+/)) {
+    const match = line.match(/^\s*(\d+)\.\s*(.*)$/);
+    if (!match) continue;
+    const moves = match[2].split(/\s+\.\.\s+/);
+    while (moves.length < 4) moves.push('');
+    body.insertAdjacentHTML('beforeend', `<tr><td>${match[1]}</td>${moves.slice(0, 4).map(move => `<td>${escapeHtml(move)}</td>`).join('')}</tr>`);
+  }
+}
+
+document.getElementById('loadSample').addEventListener('click', () => {
+  document.getElementById('pgnInput').value = samplePgn;
+  renderPgn();
+});
+document.getElementById('render').addEventListener('click', renderPgn);
+document.getElementById('pgnInput').value = samplePgn;
+renderPgn();
+</script>
+</body>
+</html>
