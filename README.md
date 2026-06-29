@@ -5,7 +5,7 @@ A fast, deterministic four-player chess engine and self-play bot for the chess.c
 ## Quick start
 
 ```bash
-python -m four_player_chess --seed 7 --time 30
+python -m four_player_chess --seed 7 --time 60 --increment 7 --html game.html
 ```
 
 Run tests:
@@ -25,3 +25,4 @@ python -m pytest
 - Forced denoted-queen promotions (`D`) worth one point when captured.
 - Capture, checkmate, stalemate, multi-check, threefold, insufficient-material, and 50-full-turn scoring rules.
 - Four self-play bots that use iterative deepening, tactical move ordering, and a fast heuristic evaluation to maximize finishing placement.
+- Standalone HTML reports showing the moves played, final scores, and full PGN for sharing game results.

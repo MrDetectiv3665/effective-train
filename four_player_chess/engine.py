@@ -291,7 +291,12 @@ def evaluate(game: Game, player: Player) -> float:
     return game.scores[player] * 100 + material * 2 - enemy_material - placement * 15
 
 
-def run_self_play(seed: int | None = None, seconds_per_side: float = 30.0, max_rounds: int = 250) -> Game:
+def run_self_play(
+    seed: int | None = None,
+    seconds_per_side: float = 60.0,
+    max_rounds: int = 250,
+    increment_seconds: float = 7.0,
+) -> Game:
     game = Game.modern(seed)
     bots = {p: Bot() for p in TURN_ORDER}
     clocks = {p: seconds_per_side for p in TURN_ORDER}
@@ -305,6 +310,7 @@ def run_self_play(seed: int | None = None, seconds_per_side: float = 30.0, max_r
         start = time.monotonic()
         move = bots[player].choose(game, player, start + min(0.05, max(0.001, clocks[player] / 40)))
         clocks[player] -= time.monotonic() - start
+        clocks[player] += increment_seconds
         if move is None:
             game.scores[player] += 20
             game.active.discard(player)
@@ -325,12 +331,19 @@ def run_self_play(seed: int | None = None, seconds_per_side: float = 30.0, max_r
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run four-player Modern chess self-play.")
     parser.add_argument("--seed", type=int, default=None)
-    parser.add_argument("--time", type=float, default=30.0, help="seconds per side")
+    parser.add_argument("--time", type=float, default=60.0, help="starting seconds per side")
+    parser.add_argument("--increment", type=float, default=7.0, help="seconds added after each move")
     parser.add_argument("--max-rounds", type=int, default=250, help="maximum full turns")
+    parser.add_argument("--html", type=str, default=None, help="write an HTML game report to this path")
     args = parser.parse_args()
-    game = run_self_play(args.seed, args.time, args.max_rounds)
+    game = run_self_play(args.seed, args.time, args.max_rounds, args.increment)
     print("Scores:", {p.value: game.scores[p] for p in TURN_ORDER})
     print("\n".join(game.pgn))
+    if args.html:
+        from .html_report import write_html_report
+
+        write_html_report(game, args.html, args.time, args.increment)
+        print(f"HTML report written to {args.html}")
 
 
 if __name__ == "__main__":
