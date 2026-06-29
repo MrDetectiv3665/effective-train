@@ -25,3 +25,17 @@ def test_self_play_emits_four_player_pgn():
     assert game.pgn
     assert game.pgn[0].startswith("1. ")
     assert " .. " in game.pgn[0]
+
+
+def test_modern_real_queen_squares_are_correct():
+    game = Game.modern(seed=2)
+    assert game.board[(7, 1)] == Piece(Player.RED, "Q")
+    assert game.board[(1, 8)] == Piece(Player.BLUE, "Q")
+    assert game.board[(8, 14)] == Piece(Player.YELLOW, "Q")
+    assert game.board[(14, 7)] == Piece(Player.GREEN, "Q")
+
+
+def test_promotion_notation_keeps_pawn_prefix():
+    game = Game(board={(4, 7): Piece(Player.RED, "P"), (10, 10): Piece(Player.RED, "K"), (5, 9): Piece(Player.BLUE, "K")})
+    move = next(move for move in game.legal_moves(Player.RED) if move.end == (4, 8))
+    assert game.apply_move(move).startswith("d7-d8=D")

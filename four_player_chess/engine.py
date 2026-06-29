@@ -88,12 +88,17 @@ class Game:
         game = cls(rng=random.Random(seed))
         # Compact Modern-like deployment on all four board edges. Coordinates are
         # file/rank pairs where a1 is lower-left from Red's perspective.
-        back = "RNBQKBNR"
-        for i, kind in enumerate(back, start=4):
-            game.board[(i, 1)] = Piece(Player.RED, kind)
-            game.board[(i, 14)] = Piece(Player.YELLOW, kind)
-            game.board[(1, i)] = Piece(Player.BLUE, kind)
-            game.board[(14, i)] = Piece(Player.GREEN, kind)
+        # Modern chess.com queens start on g1 (Red), a8 (Blue),
+        # h14 (Yellow), and n7 (Green). The side-specific back-rank
+        # strings below preserve those queen squares and keep one king per side.
+        red_green_back = "RNBQKBNR"
+        blue_yellow_back = "RNBKQBNR"
+        for offset in range(8):
+            coord = offset + 4
+            game.board[(coord, 1)] = Piece(Player.RED, red_green_back[offset])
+            game.board[(coord, 14)] = Piece(Player.YELLOW, blue_yellow_back[offset])
+            game.board[(1, coord)] = Piece(Player.BLUE, blue_yellow_back[offset])
+            game.board[(14, coord)] = Piece(Player.GREEN, red_green_back[offset])
         for i in range(4, 12):
             game.board[(i, 2)] = Piece(Player.RED, "P")
             game.board[(i, 13)] = Piece(Player.YELLOW, "P")
@@ -181,6 +186,7 @@ class Game:
 
     def apply_move(self, move: Move, score: bool = True) -> str:
         piece = self.board.pop(move.start)
+        original_piece = piece
         captured = self.board.pop(move.end, None)
         progressed = piece.kind == "P" or captured is not None
         if score and captured and captured.owner != piece.owner:
@@ -201,7 +207,7 @@ class Game:
             self.half_turns_without_progress = 0 if progressed else self.half_turns_without_progress + 1
             key = self.position_key()
             self.positions[key] = self.positions.get(key, 0) + 1
-        return self.format_move(move, piece, captured)
+        return self.format_move(move, piece, captured, original_piece.kind)
 
     def kill_side(self, player: Player) -> None:
         self.active.discard(player)
@@ -234,8 +240,9 @@ class Game:
     def clone(self) -> "Game":
         return copy.deepcopy(self)
 
-    def format_move(self, move: Move, moved: Piece, captured: Piece | None) -> str:
-        prefix = "" if moved.kind == "P" else moved.kind
+    def format_move(self, move: Move, moved: Piece, captured: Piece | None, original_kind: str | None = None) -> str:
+        notation_kind = original_kind or moved.kind
+        prefix = "" if notation_kind == "P" else notation_kind
         capture = "x" + ((captured.kind if captured and captured.kind != "P" else "") if captured else "") if captured else "-"
         suffix = "=D" if move.promotion else ""
         checks = len(self.checked_opponents(moved.owner))

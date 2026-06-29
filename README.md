@@ -30,4 +30,4 @@ python -m pytest
 
 ## Browser viewer
 
-Open `index.html` from the repository root. It launches `four_player_chess_report.html` in a new tab so you can see the moves played and the PGN without extracting a deeply nested zipped folder on Windows.
+Open `index.html` from the repository root. It launches `four_player_chess_report.html` in a new tab so you can press **Play full game live** and watch the full self-play PGN appear move by move without extracting a deeply nested zipped folder on Windows. The static browser viewer uses the corrected Modern queen squares: Red g1, Blue a8, Yellow h14, and Green n7.

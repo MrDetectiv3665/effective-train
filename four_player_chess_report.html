@@ -12,23 +12,27 @@
     button { padding: 12px 16px; margin: 6px; border:0; border-radius: 10px; background:var(--accent); color:#082f49; font-weight:700; cursor:pointer; }
     button.secondary { background:#475569; color:var(--text); }
     textarea, pre { width:100%; box-sizing:border-box; background:#020617; color:var(--text); border:1px solid var(--line); border-radius:12px; padding:14px; }
-    textarea { min-height:170px; }
-    pre { white-space:pre-wrap; overflow:auto; max-height:360px; }
+    textarea { min-height:220px; }
+    pre { white-space:pre-wrap; overflow:auto; max-height:420px; }
     table { width:100%; border-collapse:collapse; }
     th, td { border-bottom:1px solid var(--line); padding:10px; text-align:left; font-variant-numeric:tabular-nums; }
     th { color:var(--accent); }
     .meta { color:var(--muted); }
     .grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    .current { outline:2px solid var(--accent); background:#07598555; }
     @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
 <main>
   <section>
-    <h1>Four-Player Modern Chess Game Viewer</h1>
-    <p class="meta">Clock: <strong>1 minute + 7 second increment</strong>. Turn order: Red, Blue, Yellow, Green.</p>
-    <button id="loadSample">Load sample self-play PGN</button>
+    <h1>Four-Player Modern Chess Live Viewer</h1>
+    <p class="meta">Clock: <strong>1 minute + 7 second increment</strong>. Real queens: Red g1, Blue a8, Yellow h14, Green n7.</p>
+    <button id="startLive">Play full game live</button>
+    <button id="pauseLive" class="secondary">Pause</button>
+    <button id="loadFull" class="secondary">Show full PGN instantly</button>
     <button id="render" class="secondary">Render pasted PGN</button>
+    <p id="status" class="meta">Press “Play full game live” to reveal the game move by move in this tab.</p>
   </section>
   <section class="grid">
     <article>
@@ -49,38 +53,111 @@
   </section>
 </main>
 <script>
-const samplePgn = `1. h2-h3 .. b8-c8 .. h13-h12 .. m8-l8
-2. Bi1xBa9 .. Ka8xBa9 .. Qg14xQn7+ .. Kn8xQn7
-3. Qg1xm7+ .. Qa7xg13++ .. Ne14xQg13+ .. Kn7xQm7
-4. h3-h4 .. c8-d8 .. Bi14xb7 .. Bn9xg2+
-5. Ne1xBg2 .. Na5xBb7 .. Ng13-h11 .. l8-k8`;
+const fullGamePgn = `1. h2-h3 .. b8-c8 .. g13-g12+ .. m8-l8+
+2. Bi1xBa9+ .. Na10-b8 .. Qh14xNb8+ .. Qn7xh13++
+3. Ba9xQb8++ .. Ka7xBb8+ .. Kg14xQh13 .. Bn9xh3
+4. i2xBh3 .. c8-d8 .. Bf14xl8 .. m9xBl8
+5. Qg1xm7+ .. d8-e8+ .. g12-g11+ .. Nn5xQm7
+6. h3-h4 .. e8-f8 .. g11-g10 .. Nm7-k8
+7. h4-h5 .. f8-g8 .. g10-g9 .. Nk8-i7
+8. h5-h6 .. g8-h8=D+ .. g9xDh8 .. Ni7-g8
+9. h6-h7 .. Kb8-c7 .. Kh13-h12 .. Ng8-h6
+10. g2-g3 .. Qa8xh8+ .. Kh12-g11 .. Nh6-g8
+11. g3-g4 .. Qh8xNg8+ .. Kg11-h10 .. l8-k8
+12. h7-h8=D .. Qg8xDh8+ .. Bn6-h12++
+13. Bf1-h3+ .. Qh8-f10 .. Bh12xQf10+
+14. g4-g5+ .. Kc7-d6 .. Bf10xb6
+15. Bh3xb9 .. Kd6-e7 .. Bb6xNa5
+16. g5-g6 .. Ra4xBa5 .. k8-j8
+17. g6-g7 .. Ke7-f7 .. j8-i8
+18. g7-g8=D+ .. Kf7xDg8 .. i8-h8
+19. Bb9-d7 .. Kg8xh8 .. Nn10-l9
+20. Bd7xb5 .. Ba6xBb5 .. Nl9-j8
+21. f2-f3 .. Bb5xe2 .. Nj8-h7
+22. f3-f4 .. Be2xRd1 .. Nh7-g9
+23. f4-f5 .. Kh8xNg9 .. m6-l6
+24. f5-f6 .. Bd1xm10 .. l6-k6
+25. f6-f7 .. Bm10xRn11 .. k6-j6
+26. f7-f8=D++ .. Kg9xDf8 .. j6-i6
+27. Nj1-i3 .. Bn11xi6 .. Kn8-m8
+28. Ni3-h5 .. Ra5xNh5+ .. Km8-l8+
+29. Kh1-g2 .. Rh5xm5 .. Kl8-k7
+30. Kg2-g3 .. Rm5xm11 .. Kk7-j8
+31. Kg3-h4 .. Rm11xm4+ .. Rn4xRm4+
+32. Kh4-g5 .. Kf8-g8 .. Rm4xb4
+33. Kg5-h6 .. Kg8-h8 .. Rb4xb7
+34. Kh6xBi6 .. Kh8-g8 .. Rb7xb10
+35. Ki6-h6 .. Kg8-h8 .. Rb10xb11
+36. Kh6-g6 .. Ra11xRb11 .. Kj8-j7
+37. Kg6-h6 .. Kh8-g8 .. Kj7-i8
+38. Kh6-g6 .. Kg8-f8 .. Ki8-h8
+39. Kg6-h6 .. Kf8-f7 .. Kh8-h9
+40. Kh6-h7 .. Kf7-f8 .. Kh9-i9
+41. Kh7-i7 .. Kf8-g7 .. Ki9-h9
+42. Ki7-j7 .. Kg7-h7 .. Kh9-g9
+43. Kj7-j8 .. Kh7-g7 .. Kg9-h9
+44. Kj8-i7 .. Kg7-f8 .. Kh9-g10
+45. Ki7-h7 .. Kf8-f7 .. Kg10-g9
+46. Kh7-i7 .. Kf7-g7 .. Kg9-h9
+47. Ki7-j7 .. Kg7-h7 .. Kh9-g9
+48. Kj7-j8 .. Kh7-g7 .. Kg9-h9
+49. Kj8-j7`;
+let liveTimer = null;
+let liveIndex = 0;
+const fullLines = fullGamePgn.split(/\n+/);
 
 function escapeHtml(value) {
   return value.replace(/[&<>'"]/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));
 }
 
-function renderPgn() {
-  const pgn = document.getElementById('pgnInput').value.trim();
-  document.getElementById('pgnOutput').textContent = pgn || 'Paste PGN on the left, then click Render pasted PGN.';
-  const body = document.getElementById('movesBody');
-  body.innerHTML = '';
-  if (!pgn) return;
-  for (const line of pgn.split(/\n+/)) {
-    const match = line.match(/^\s*(\d+)\.\s*(.*)$/);
-    if (!match) continue;
-    const moves = match[2].split(/\s+\.\.\s+/);
-    while (moves.length < 4) moves.push('');
-    body.insertAdjacentHTML('beforeend', `<tr><td>${match[1]}</td>${moves.slice(0, 4).map(move => `<td>${escapeHtml(move)}</td>`).join('')}</tr>`);
-  }
+function lineToRow(line, current = false) {
+  const match = line.match(/^\s*(\d+)\.\s*(.*)$/);
+  if (!match) return '';
+  const moves = match[2].split(/\s+\.\.\s+/);
+  while (moves.length < 4) moves.push('');
+  return `<tr class="${current ? 'current' : ''}"><td>${match[1]}</td>${moves.slice(0, 4).map(move => `<td>${escapeHtml(move)}</td>`).join('')}</tr>`;
 }
 
-document.getElementById('loadSample').addEventListener('click', () => {
-  document.getElementById('pgnInput').value = samplePgn;
-  renderPgn();
-});
+function renderLines(lines, currentLine = -1) {
+  document.getElementById('pgnOutput').textContent = lines.join('\n') || 'Paste PGN on the left, then click Render pasted PGN.';
+  document.getElementById('movesBody').innerHTML = lines.map((line, index) => lineToRow(line, index === currentLine)).join('');
+}
+
+function renderPgn() {
+  stopLive();
+  const pgn = document.getElementById('pgnInput').value.trim();
+  renderLines(pgn ? pgn.split(/\n+/) : []);
+  document.getElementById('status').textContent = 'Rendered pasted PGN.';
+}
+
+function stopLive() {
+  if (liveTimer) clearInterval(liveTimer);
+  liveTimer = null;
+}
+
+function startLive() {
+  stopLive();
+  liveIndex = 0;
+  document.getElementById('pgnInput').value = fullGamePgn;
+  renderLines([], -1);
+  document.getElementById('status').textContent = 'Live game running...';
+  liveTimer = setInterval(() => {
+    const visible = fullLines.slice(0, liveIndex + 1);
+    renderLines(visible, liveIndex);
+    liveIndex += 1;
+    if (liveIndex >= fullLines.length) {
+      stopLive();
+      document.getElementById('status').textContent = 'Full game complete.';
+    }
+  }, 550);
+}
+
+document.getElementById('startLive').addEventListener('click', startLive);
+document.getElementById('pauseLive').addEventListener('click', () => { stopLive(); document.getElementById('status').textContent = 'Live game paused.'; });
+document.getElementById('loadFull').addEventListener('click', () => { stopLive(); document.getElementById('pgnInput').value = fullGamePgn; renderLines(fullLines); document.getElementById('status').textContent = 'Full PGN loaded instantly.'; });
 document.getElementById('render').addEventListener('click', renderPgn);
-document.getElementById('pgnInput').value = samplePgn;
-renderPgn();
+document.getElementById('pgnInput').value = fullGamePgn;
+renderLines([]);
 </script>
 </body>
 </html>
