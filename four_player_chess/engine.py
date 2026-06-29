@@ -18,6 +18,7 @@ from typing import Iterable
 FILES = "abcdefghijklmn"
 BOARD_SIZE = 14
 CAPTURE_POINTS = {"P": 1, "D": 1, "N": 3, "B": 5, "R": 5, "Q": 9, "K": 20}
+TACTICAL_VALUES = {"P": 1, "D": 6, "N": 3, "B": 5, "R": 5, "Q": 9, "K": 20}
 MAJOR_PIECES = {"K", "Q", "R", "B", "N"}
 
 
@@ -178,7 +179,7 @@ class Game:
                 continue
             if victim is not None and piece.owner == victim:
                 continue
-            if square in set(self.pseudo_targets(sq, piece)):
+            if square in set(self.attack_targets(sq, piece)):
                 attackers.append((sq, piece))
         return attackers
 
@@ -189,9 +190,19 @@ class Game:
                 continue
             if sq == square:
                 continue
-            if square in set(self.pseudo_targets(sq, piece)):
+            if square in set(self.attack_targets(sq, piece)):
                 defenders.append((sq, piece))
         return defenders
+
+
+    def attack_targets(self, sq: tuple[int, int], piece: Piece) -> Iterable[tuple[int, int]]:
+        if piece.kind == "P":
+            for cx, cy in PAWN_CAPTURES[piece.owner]:
+                cap = (sq[0] + cx, sq[1] + cy)
+                if self.inside(cap):
+                    yield cap
+            return
+        yield from self.pseudo_targets(sq, piece)
 
     def in_check(self, player: Player) -> bool:
         kings = [sq for sq, pc in self.board.items() if pc.owner == player and pc.kind == "K" and not pc.dead]
@@ -200,7 +211,7 @@ class Game:
         king = kings[0]
         for sq, piece in self.board.items():
             if piece.owner != player and piece.owner in self.active and not piece.dead:
-                if king in set(self.pseudo_targets(sq, piece)):
+                if king in set(self.attack_targets(sq, piece)):
                     return True
         return False
 
@@ -293,25 +304,25 @@ class Bot:
     def static_score(self, game: Game, move: Move, player: Player) -> float:
         piece = game.board[move.start]
         target = game.board.get(move.end)
-        capture_value = target.value if target else 0
+        capture_value = tactical_value(target) if target else 0
         clone = game.clone()
         clone.apply_move(move)
         moved_piece = clone.board[move.end]
         attackers = clone.attackers(move.end, player)
         defenders = clone.defenders(move.end, player)
-        moved_value = moved_piece.value
+        moved_value = tactical_value(moved_piece)
 
         score = capture_value * 42 + center_bonus(move.end)
         if move.promotion:
-            score += 2 if not attackers else -8
+            score += 10 if not attackers else -30
         if piece.kind == "P":
             score += pawn_progress(move.end, player) * 3
         if piece.kind == "K" and not target:
             score -= 2
 
         if attackers:
-            cheapest_attacker = min(attacker.value for _, attacker in attackers)
-            cheapest_defender = min((defender.value for _, defender in defenders), default=99)
+            cheapest_attacker = min(tactical_value(attacker) for _, attacker in attackers)
+            cheapest_defender = min((tactical_value(defender) for _, defender in defenders), default=99)
             exposure = max(0, moved_value - capture_value)
             score -= exposure * 35
             if moved_value >= 5 and capture_value <= 1:
@@ -342,6 +353,10 @@ def center_bonus(sq: tuple[int, int]) -> float:
     return 7 - (abs(sq[0] - 7.5) + abs(sq[1] - 7.5)) / 2
 
 
+def tactical_value(piece: Piece | None) -> int:
+    return 0 if piece is None or piece.dead else TACTICAL_VALUES[piece.kind]
+
+
 def pawn_progress(sq: tuple[int, int], player: Player) -> float:
     if player == Player.RED:
         return sq[1] - 2
@@ -353,13 +368,13 @@ def pawn_progress(sq: tuple[int, int], player: Player) -> float:
 
 
 def evaluate(game: Game, player: Player) -> float:
-    material = sum(pc.value for pc in game.board.values() if pc.owner == player and not pc.dead)
-    enemy_material = sum(pc.value for pc in game.board.values() if pc.owner != player and not pc.dead) / 3
+    material = sum(tactical_value(pc) for pc in game.board.values() if pc.owner == player and not pc.dead)
+    enemy_material = sum(tactical_value(pc) for pc in game.board.values() if pc.owner != player and not pc.dead) / 3
     placement = sorted(game.scores.values(), reverse=True).index(game.scores[player])
     hanging = 0
     for sq, piece in game.board.items():
         if piece.owner == player and not piece.dead and game.attackers(sq, player):
-            hanging += piece.value
+            hanging += tactical_value(piece)
     repetition_penalty = 25 if any(count >= 2 for count in game.positions.values()) else 0
     return game.scores[player] * 100 + material * 8 - enemy_material * 2 - hanging * 24 - placement * 20 - repetition_penalty
 

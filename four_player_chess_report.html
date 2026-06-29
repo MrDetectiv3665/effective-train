@@ -53,67 +53,36 @@
   </section>
 </main>
 <script>
-const fullGamePgn = `1. h2-h3 .. b6-c6 .. g13-g12 .. m10-l10
-2. f2-f3+ .. b5-c5 .. g12-g11 .. m9-l9
-3. h3-h4 .. b4-c4 .. g11-g10 .. m5-l5
-4. Qg1xc5 .. h13-h12 .. l10-k10
-5. h4-h5 .. h12-h11 .. m6-l6
-6. h5-h6 .. i13-i12
-7. h6-h7 .. k13-k12
-8. h7-h8=D .. f13-f12
-9. Dh8xh11 .. Qh14xDh11+
-10. Nj1-h2 .. f12-f11
-11. g2-g3 .. f11-f10
-12. g3-g4 .. f10-f9
-13. g4-g5 .. k12-k11
-14. f3-f4 .. e13-e12
-15. g5-g6 .. e12-e11
-16. g6-g7 .. e11-e10
-17. f4-f5 .. e10-e9
-18. i2-i3 .. e9-e8
-19. i3-i4 .. Qh11-h7
-20. i4-i5 .. Qh7xg7
-21. i5-i6 .. Qg7-h8
-22. j2-j3 .. Qh8-g8
-23. i6-i7 .. Qg8-g7
-24. i7-i8=D .. Qg7-h6
-25. Di8xg10+ .. Kg14-h14
-26. Dg10xf9 .. Qh6-g7
-27. Df9xBf14+ .. Kh14-i13
-28. Df14xBi14+ .. Ki13xDi14
-29. e2-e3 .. Qg7-h8
-30. e3-e4 .. Qh8-g8
-31. f5-f6 .. Qg8-h8
-32. e4-e5 .. Qh8-h7
-33. e5-e6 .. Qh7-e4+
-34. Kh1-g1 .. Qe4xe6
-35. j3-j4 .. Qe6xf6
-36. j4-j5 .. Qf6xRk1
-37. Qc5-f8 .. Qk1xBi1+
-38. Kg1-g2 .. d13-d12
-39. Qf8xe8 .. i12-i11
-40. j5-j6 .. i11-i10
-41. j6-j7 .. i10-i9
-42. Qe8-e10+ .. Ki14-h14
-43. Qe10-h7+ .. Kh14-i13
-44. Qh7-c7+ .. Ki13-h13
-45. Qc7-h7+ .. Kh13-g13
-46. Qh7-g8+ .. Kg13-f12
-47. Qg8-f7+ .. Kf12-g12
-48. Qf7-g7+ .. Kg12-h12
-49. Qg7-h7+ .. Kh12-i11
-50. Qh7-e7+ .. Ki11-h11
-51. Qe7-h7+ .. Kh11-g11
-52. Qh7-g7+ .. Kg11-f10
-53. Qg7-f7+ .. Kf10-g10
-54. Qf7-g7+ .. Kg10-f9
-55. Qg7-h7+ .. Kf9-g9
-56. Qh7-g7+ .. Kg9-h10
-57. Qg7-h7+ .. Kh10-g10
-58. Qh7-g7+ .. Kg10-f9
-59. Qg7-h7+ .. Kf9-g9
-60. Qh7-g7+ .. Kg9-h10
-61. Qg7-h7+ .. Kh10-g9`;
+const fullGamePgn = `1. g2-g3 .. b7-c7+ .. h13-h12+ .. m8-l8++
+2. f2-f3+ .. Ba6xBi14+ .. i13-i12 .. Bn9xBf1
+3. Qg1xBf1 .. Bi14xj13 .. h12-h11 .. l8-k8
+4. g3-g4 .. Bj13xRk14 .. h11-h10 .. k8-j8
+5. g4-g5 .. Bk14xRn11 .. h10-h9 .. m10-l10
+6. g5-g6 .. c7-d7 .. g13-g12 .. l10-k10
+7. g6-g7 .. d7-e7 .. g12-g11 .. m5-l5
+8. h2-h3 .. e7-f7 .. g11-g10 .. m6-l6
+9. h3-h4 .. b6-c6 .. g10-g9 .. m4-l4
+10. Qf1-g1+ .. Ka7-a6 .. Qh14-h13+ .. l6-k6+
+11. f3-f4+ .. Na5-b7 .. i12-i11 .. l4-k4
+12. f4-f5 .. Bn11xe2 .. i11-i10 .. m11-l11
+13. f5-f6 .. Be2xRd1 .. f13-f12 .. l11-k11
+14. i2-i3 .. b9-c9+ .. Kg14-h14 .. l5-k5
+15. i3-i4 .. b10-c10 .. f12-f11 .. k6-j6
+16. Qg1xk5 .. c9-d9 .. f11-f10 .. Qn7-m8
+17. Qk5xj6 .. c10-d10 .. Qh13xd9 .. Bn6-m5
+18. i4-i5 .. b5-c5 .. Qd9xf7 .. Qm8-f1++
+19. Kh1-h2+ .. Ka6-b6 .. g9-g8 .. Qf1xNe1
+20. Qj6-h8 .. b8-c8+ .. Qf7xf6+ .. Qe1xBd1+
+21. Kh2-g2 .. Ba9xBi1 .. Qf6xRa11 .. Qd1xBi1
+22. Qh8xf10+ .. Kb6-a6 .. Qa11xh4 .. k11-j11
+23. Qf10xBf14+ .. d10-e10+ .. Kh14-i13 .. j11xi10
+24. Qf14xe13+ .. e10-f10+ .. Ne14-g13 .. i10xh9
+25. Qe13xRd14 .. b11-c11 .. Qh4xh9 .. Qi1xi5+
+26. d2-d3+ .. Ra4-a2++ .. Ki13-h12+ .. Bm5xj2+
+27. Kg2-g1 .. Ra2xBj2 .. Qh9-h7 .. k10-j10
+28. Qd14xNj14+ .. Rj2xj8++ .. Kh12-h11+ .. Kn8-n9
+29. Qj14xf10 .. Qa8-d11+ .. Kh11-g12 .. Qi5-g5+
+30. Kg1-f1 .. Qd11xd13 .. Qh7-h3++ .. Kn9-m10+`;
 let liveTimer = null;
 let liveIndex = 0;
 const fullLines = fullGamePgn.split(/\n+/);

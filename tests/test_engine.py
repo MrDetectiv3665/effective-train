@@ -59,3 +59,25 @@ def test_bot_avoids_hanging_real_queen_for_a_pawn():
     move = bot.choose(game, Player.RED, deadline=time.monotonic() - 1)
     assert move is not None
     assert move.end != (13, 7)
+
+
+def test_pawns_do_not_give_forward_check():
+    game = Game(board={(5, 5): Piece(Player.RED, "P"), (5, 6): Piece(Player.BLUE, "K"), (8, 1): Piece(Player.RED, "K")})
+    assert not game.in_check(Player.BLUE)
+
+
+def test_denoted_queen_has_internal_material_value():
+    game = Game(
+        board={
+            (4, 8): Piece(Player.RED, "D"),
+            (8, 1): Piece(Player.RED, "K"),
+            (5, 9): Piece(Player.BLUE, "P"),
+            (6, 10): Piece(Player.BLUE, "K"),
+            (6, 8): Piece(Player.BLUE, "B"),
+        },
+        active={Player.RED, Player.BLUE},
+    )
+    bot = Bot()
+    move = bot.choose(game, Player.RED, deadline=time.monotonic() - 1)
+    assert move is not None
+    assert move.end != (5, 9)
