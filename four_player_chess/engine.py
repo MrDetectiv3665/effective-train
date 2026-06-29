@@ -170,6 +170,29 @@ class Game:
                     break
                 end = (end[0] + dx, end[1] + dy)
 
+
+    def attackers(self, square: tuple[int, int], victim: Player | None = None) -> list[tuple[tuple[int, int], Piece]]:
+        attackers: list[tuple[tuple[int, int], Piece]] = []
+        for sq, piece in self.board.items():
+            if piece.dead or piece.owner not in self.active:
+                continue
+            if victim is not None and piece.owner == victim:
+                continue
+            if square in set(self.pseudo_targets(sq, piece)):
+                attackers.append((sq, piece))
+        return attackers
+
+    def defenders(self, square: tuple[int, int], player: Player) -> list[tuple[tuple[int, int], Piece]]:
+        defenders: list[tuple[tuple[int, int], Piece]] = []
+        for sq, piece in self.board.items():
+            if piece.dead or piece.owner != player:
+                continue
+            if sq == square:
+                continue
+            if square in set(self.pseudo_targets(sq, piece)):
+                defenders.append((sq, piece))
+        return defenders
+
     def in_check(self, player: Player) -> bool:
         kings = [sq for sq, pc in self.board.items() if pc.owner == player and pc.kind == "K" and not pc.dead]
         if not kings:
@@ -263,15 +286,43 @@ class Bot:
         best = ordered[0]
         depth = 1
         while time.monotonic() < deadline and depth <= 2:
-            best = max(ordered[:24], key=lambda m: self.search_score(game, m, player, depth, deadline))
+            best = max(ordered[:32], key=lambda m: self.search_score(game, m, player, depth, deadline))
             depth += 1
         return best
 
     def static_score(self, game: Game, move: Move, player: Player) -> float:
+        piece = game.board[move.start]
         target = game.board.get(move.end)
-        score = (target.value if target else 0) * 20
-        score += 9 if move.promotion else 0
-        score += center_bonus(move.end)
+        capture_value = target.value if target else 0
+        clone = game.clone()
+        clone.apply_move(move)
+        moved_piece = clone.board[move.end]
+        attackers = clone.attackers(move.end, player)
+        defenders = clone.defenders(move.end, player)
+        moved_value = moved_piece.value
+
+        score = capture_value * 42 + center_bonus(move.end)
+        if move.promotion:
+            score += 2 if not attackers else -8
+        if piece.kind == "P":
+            score += pawn_progress(move.end, player) * 3
+        if piece.kind == "K" and not target:
+            score -= 2
+
+        if attackers:
+            cheapest_attacker = min(attacker.value for _, attacker in attackers)
+            cheapest_defender = min((defender.value for _, defender in defenders), default=99)
+            exposure = max(0, moved_value - capture_value)
+            score -= exposure * 35
+            if moved_value >= 5 and capture_value <= 1:
+                score -= moved_value * 45
+            if cheapest_attacker <= moved_value and cheapest_defender > cheapest_attacker:
+                score -= moved_value * 18
+
+        if clone.in_check(player):
+            score -= 10_000
+        checked = clone.checked_opponents(player)
+        score += len(checked) * (8 if piece.kind in {"Q", "D"} else 18)
         return score + game.rng.random() * 0.01
 
     def search_score(self, game: Game, move: Move, player: Player, depth: int, deadline: float) -> float:
@@ -281,7 +332,7 @@ class Bot:
             return evaluate(clone, player)
         clone.turn_index += 1
         opponent = clone.current_player
-        replies = clone.legal_moves(opponent)[:12]
+        replies = sorted(clone.legal_moves(opponent), key=lambda m: self.static_score(clone, m, opponent), reverse=True)[:16]
         if not replies:
             return evaluate(clone, player)
         return min(self.search_score(clone, reply, player, depth - 1, deadline) for reply in replies)
@@ -291,11 +342,26 @@ def center_bonus(sq: tuple[int, int]) -> float:
     return 7 - (abs(sq[0] - 7.5) + abs(sq[1] - 7.5)) / 2
 
 
+def pawn_progress(sq: tuple[int, int], player: Player) -> float:
+    if player == Player.RED:
+        return sq[1] - 2
+    if player == Player.BLUE:
+        return sq[0] - 2
+    if player == Player.YELLOW:
+        return 13 - sq[1]
+    return 13 - sq[0]
+
+
 def evaluate(game: Game, player: Player) -> float:
     material = sum(pc.value for pc in game.board.values() if pc.owner == player and not pc.dead)
     enemy_material = sum(pc.value for pc in game.board.values() if pc.owner != player and not pc.dead) / 3
     placement = sorted(game.scores.values(), reverse=True).index(game.scores[player])
-    return game.scores[player] * 100 + material * 2 - enemy_material - placement * 15
+    hanging = 0
+    for sq, piece in game.board.items():
+        if piece.owner == player and not piece.dead and game.attackers(sq, player):
+            hanging += piece.value
+    repetition_penalty = 25 if any(count >= 2 for count in game.positions.values()) else 0
+    return game.scores[player] * 100 + material * 8 - enemy_material * 2 - hanging * 24 - placement * 20 - repetition_penalty
 
 
 def run_self_play(
@@ -315,7 +381,7 @@ def run_self_play(
             break
         player = game.current_player
         start = time.monotonic()
-        move = bots[player].choose(game, player, start + min(0.05, max(0.001, clocks[player] / 40)))
+        move = bots[player].choose(game, player, start + min(0.12, max(0.003, clocks[player] / 30)))
         clocks[player] -= time.monotonic() - start
         clocks[player] += increment_seconds
         if move is None:

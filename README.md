@@ -24,7 +24,7 @@ python -m pytest
   - Green promotes on file `g`.
 - Forced denoted-queen promotions (`D`) worth one point when captured.
 - Capture, checkmate, stalemate, multi-check, threefold, insufficient-material, and 50-full-turn scoring rules.
-- Four self-play bots that use iterative deepening, tactical move ordering, and a fast heuristic evaluation to maximize finishing placement.
+- Four self-play bots that use iterative deepening, tactical move ordering, hanging-piece penalties, promotion safety checks, and placement-aware evaluation.
 - Standalone HTML reports showing the moves played, final scores, and full PGN for sharing game results.
 
 

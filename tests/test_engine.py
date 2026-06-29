@@ -1,4 +1,6 @@
-from four_player_chess.engine import Game, Piece, Player, run_self_play
+import time
+
+from four_player_chess.engine import Bot, Game, Piece, Player, run_self_play
 
 
 def test_modern_setup_has_four_sides_and_moves():
@@ -39,3 +41,21 @@ def test_promotion_notation_keeps_pawn_prefix():
     game = Game(board={(4, 7): Piece(Player.RED, "P"), (10, 10): Piece(Player.RED, "K"), (5, 9): Piece(Player.BLUE, "K")})
     move = next(move for move in game.legal_moves(Player.RED) if move.end == (4, 8))
     assert game.apply_move(move).startswith("d7-d8=D")
+
+
+def test_bot_avoids_hanging_real_queen_for_a_pawn():
+    game = Game(
+        board={
+            (7, 1): Piece(Player.RED, "Q"),
+            (8, 1): Piece(Player.RED, "K"),
+            (5, 2): Piece(Player.RED, "P"),
+            (13, 7): Piece(Player.GREEN, "P"),
+            (14, 6): Piece(Player.GREEN, "B"),
+            (14, 8): Piece(Player.GREEN, "K"),
+        },
+        active={Player.RED, Player.GREEN},
+    )
+    bot = Bot()
+    move = bot.choose(game, Player.RED, deadline=time.monotonic() - 1)
+    assert move is not None
+    assert move.end != (13, 7)
