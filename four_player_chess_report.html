@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Four-Player Modern Chess Game</title>
+  <style>
+    :root { color-scheme: dark; --bg:#0f172a; --panel:#111827; --line:#334155; --text:#f8fafc; --muted:#cbd5e1; --accent:#38bdf8; }
+    body { margin:0; font-family: Arial, sans-serif; background:var(--bg); color:var(--text); }
+    main { max-width: 1180px; margin: 0 auto; padding: 28px 18px; }
+    section { background:var(--panel); border:1px solid var(--line); border-radius:18px; padding:20px; margin:18px 0; box-shadow:0 20px 60px #0006; }
+    button { padding: 12px 16px; margin: 6px; border:0; border-radius: 10px; background:var(--accent); color:#082f49; font-weight:700; cursor:pointer; }
+    button.secondary { background:#475569; color:var(--text); }
+    textarea, pre { width:100%; box-sizing:border-box; background:#020617; color:var(--text); border:1px solid var(--line); border-radius:12px; padding:14px; }
+    textarea { min-height:220px; }
+    pre { white-space:pre-wrap; overflow:auto; max-height:420px; }
+    table { width:100%; border-collapse:collapse; }
+    th, td { border-bottom:1px solid var(--line); padding:10px; text-align:left; font-variant-numeric:tabular-nums; }
+    th { color:var(--accent); }
+    .meta { color:var(--muted); }
+    .grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    .current { outline:2px solid var(--accent); background:#07598555; }
+    @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+<main>
+  <section>
+    <h1>Four-Player Modern Chess Live Viewer</h1>
+    <p class="meta">Clock: <strong>1 minute + 7 second increment</strong>. Real queens: Red g1, Blue a8, Yellow h14, Green n7.</p>
+    <button id="startLive">Play full game live</button>
+    <button id="pauseLive" class="secondary">Pause</button>
+    <button id="loadFull" class="secondary">Show full PGN instantly</button>
+    <button id="render" class="secondary">Render pasted PGN</button>
+    <p id="status" class="meta">Press “Play full game live” to reveal the game move by move in this tab.</p>
+  </section>
+  <section class="grid">
+    <article>
+      <h2>Paste or edit PGN</h2>
+      <textarea id="pgnInput" spellcheck="false" aria-label="Four-player PGN input"></textarea>
+    </article>
+    <article>
+      <h2>PGN of this game</h2>
+      <pre id="pgnOutput"></pre>
+    </article>
+  </section>
+  <section>
+    <h2>Moves played</h2>
+    <table>
+      <thead><tr><th>#</th><th>Red</th><th>Blue</th><th>Yellow</th><th>Green</th></tr></thead>
+      <tbody id="movesBody"></tbody>
+    </table>
+  </section>
+</main>
+<script>
+const fullGamePgn = `1. g2-g3 .. b7-c7+ .. h13-h12+ .. m8-l8++
+2. f2-f3+ .. Ba6xBi14+ .. i13-i12 .. Bn9xBf1
+3. Qg1xBf1 .. Bi14xj13 .. h12-h11 .. l8-k8
+4. g3-g4 .. Bj13xRk14 .. h11-h10 .. k8-j8
+5. g4-g5 .. Bk14xRn11 .. h10-h9 .. m10-l10
+6. g5-g6 .. c7-d7 .. g13-g12 .. l10-k10
+7. g6-g7 .. d7-e7 .. g12-g11 .. m5-l5
+8. h2-h3 .. e7-f7 .. g11-g10 .. m6-l6
+9. h3-h4 .. b6-c6 .. g10-g9 .. m4-l4
+10. Qf1-g1+ .. Ka7-a6 .. Qh14-h13+ .. l6-k6+
+11. f3-f4+ .. Na5-b7 .. i12-i11 .. l4-k4
+12. f4-f5 .. Bn11xe2 .. i11-i10 .. m11-l11
+13. f5-f6 .. Be2xRd1 .. f13-f12 .. l11-k11
+14. i2-i3 .. b9-c9+ .. Kg14-h14 .. l5-k5
+15. i3-i4 .. b10-c10 .. f12-f11 .. k6-j6
+16. Qg1xk5 .. c9-d9 .. f11-f10 .. Qn7-m8
+17. Qk5xj6 .. c10-d10 .. Qh13xd9 .. Bn6-m5
+18. i4-i5 .. b5-c5 .. Qd9xf7 .. Qm8-f1++
+19. Kh1-h2+ .. Ka6-b6 .. g9-g8 .. Qf1xNe1
+20. Qj6-h8 .. b8-c8+ .. Qf7xf6+ .. Qe1xBd1+
+21. Kh2-g2 .. Ba9xBi1 .. Qf6xRa11 .. Qd1xBi1
+22. Qh8xf10+ .. Kb6-a6 .. Qa11xh4 .. k11-j11
+23. Qf10xBf14+ .. d10-e10+ .. Kh14-i13 .. j11xi10
+24. Qf14xe13+ .. e10-f10+ .. Ne14-g13 .. i10xh9
+25. Qe13xRd14 .. b11-c11 .. Qh4xh9 .. Qi1xi5+
+26. d2-d3+ .. Ra4-a2++ .. Ki13-h12+ .. Bm5xj2+
+27. Kg2-g1 .. Ra2xBj2 .. Qh9-h7 .. k10-j10
+28. Qd14xNj14+ .. Rj2xj8++ .. Kh12-h11+ .. Kn8-n9
+29. Qj14xf10 .. Qa8-d11+ .. Kh11-g12 .. Qi5-g5+
+30. Kg1-f1 .. Qd11xd13 .. Qh7-h3++ .. Kn9-m10+`;
+let liveTimer = null;
+let liveIndex = 0;
+const fullLines = fullGamePgn.split(/\n+/);
+
+function escapeHtml(value) {
+  return value.replace(/[&<>'"]/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));
+}
+
+function lineToRow(line, current = false) {
+  const match = line.match(/^\s*(\d+)\.\s*(.*)$/);
+  if (!match) return '';
+  const moves = match[2].split(/\s+\.\.\s+/);
+  while (moves.length < 4) moves.push('');
+  return `<tr class="${current ? 'current' : ''}"><td>${match[1]}</td>${moves.slice(0, 4).map(move => `<td>${escapeHtml(move)}</td>`).join('')}</tr>`;
+}
+
+function renderLines(lines, currentLine = -1) {
+  document.getElementById('pgnOutput').textContent = lines.join('\n') || 'Paste PGN on the left, then click Render pasted PGN.';
+  document.getElementById('movesBody').innerHTML = lines.map((line, index) => lineToRow(line, index === currentLine)).join('');
+}
+
+function renderPgn() {
+  stopLive();
+  const pgn = document.getElementById('pgnInput').value.trim();
+  renderLines(pgn ? pgn.split(/\n+/) : []);
+  document.getElementById('status').textContent = 'Rendered pasted PGN.';
+}
+
+function stopLive() {
+  if (liveTimer) clearInterval(liveTimer);
+  liveTimer = null;
+}
+
+function startLive() {
+  stopLive();
+  liveIndex = 0;
+  document.getElementById('pgnInput').value = fullGamePgn;
+  renderLines([], -1);
+  document.getElementById('status').textContent = 'Live game running...';
+  liveTimer = setInterval(() => {
+    const visible = fullLines.slice(0, liveIndex + 1);
+    renderLines(visible, liveIndex);
+    liveIndex += 1;
+    if (liveIndex >= fullLines.length) {
+      stopLive();
+      document.getElementById('status').textContent = 'Full game complete.';
+    }
+  }, 550);
+}
+
+document.getElementById('startLive').addEventListener('click', startLive);
+document.getElementById('pauseLive').addEventListener('click', () => { stopLive(); document.getElementById('status').textContent = 'Live game paused.'; });
+document.getElementById('loadFull').addEventListener('click', () => { stopLive(); document.getElementById('pgnInput').value = fullGamePgn; renderLines(fullLines); document.getElementById('status').textContent = 'Full PGN loaded instantly.'; });
+document.getElementById('render').addEventListener('click', renderPgn);
+document.getElementById('pgnInput').value = fullGamePgn;
+renderLines([]);
+</script>
+</body>
+</html>
